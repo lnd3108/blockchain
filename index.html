@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Explorer</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body class="bg-dark text-light">
+    <div class="container mt-4">
+        <h2 class="text-center mb-4">🚀 Blockchain Explorer</h2>
+
+        <!-- Hiển thị Blockchain -->
+        <button class="btn btn-primary mb-3" onclick="fetchBlockchain()">🔍 Xem Chuỗi Blockchain</button>
+        <div id="blockchainData" class="table-responsive"></div>
+
+        <!-- Thêm Giao Dịch -->
+        <div class="card bg-secondary p-3 mb-3">
+            <h4>💰 Thêm Giao Dịch Mới</h4>
+            <input class="form-control mb-2" type="text" id="senderKey" placeholder="🔑 Khóa công khai người gửi">
+            <input class="form-control mb-2" type="text" id="recipientKey" placeholder="🔑 Khóa công khai người nhận">
+            <input class="form-control mb-2" type="number" id="amount" placeholder="💵 Số tiền">
+            <input class="form-control mb-2" type="text" id="signature" placeholder="✍️ Chữ ký số">
+            <button class="btn btn-success" onclick="addTransaction()">✅ Gửi Giao Dịch</button>
+        </div>
+
+        <!-- Đào Block -->
+        <button class="btn btn-warning mb-3" id="mineBlockBtn" onclick="mineBlock()">⛏️ Đào Block</button>
+
+        <!-- Kiểm tra Blockchain hợp lệ -->
+        <button class="btn btn-info mb-3" onclick="validateBlockchain()">✅ Kiểm Tra Tính Hợp Lệ</button>
+        <p id="validationResult" class="mt-2"></p>
+    </div>
+
+    <script>
+        function fetchBlockchain() {
+            $.get("http://localhost:5000/get_chain", function(data) {
+                let html = `<table class="table table-bordered table-dark">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Hash</th>
+                                    <th>Giao Dịch</th>
+                                    <th>Nonce</th>
+                                    <th>Timestamp</th>
+                                </tr>`;
+                data.forEach(block => {
+                    html += `<tr>
+                                <td>${block.index}</td>
+                                <td>${block.hash.substring(0, 15)}...</td>
+                                <td>${block.transactions.length} giao dịch</td>
+                                <td>${block.nonce}</td>
+                                <td>${new Date(block.timestamp).toLocaleString()}</td>
+                             </tr>`;
+                });
+                html += `</table>`;
+                $("#blockchainData").html(html);
+            });
+        }
+
+        function addTransaction() {
+            let senderPublicKey = $("#senderKey").val();
+            let recipientPublicKey = $("#recipientKey").val();
+            let amount = $("#amount").val();
+            let signature = $("#signature").val();
+
+            $.ajax({
+                url: "http://localhost:5000/add_transaction",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ senderPublicKey, recipientPublicKey, amount, signature }),
+                success: function(response) {
+                    alert(response.message);
+                    fetchBlockchain();
+                },
+                error: function(error) {
+                    alert(error.responseJSON.message);
+                }
+            });
+        }
+
+        function mineBlock() {
+            $("#mineBlockBtn").prop("disabled", true).text("⛏️ Đang đào...");
+            $.get("http://localhost:5000/mine_block", function(response) {
+                alert(response.message);
+                fetchBlockchain();
+                $("#mineBlockBtn").prop("disabled", false).text("⛏️ Đào Block");
+            });
+        }
+
+        function validateBlockchain() {
+            $.get("http://localhost:5000/validate_chain", function(response) {
+                $("#validationResult").text(response.valid ? "✅ Blockchain hợp lệ" : "❌ Blockchain bị lỗi!");
+            });
+        }
+    </script>
+</body>
+</html>
